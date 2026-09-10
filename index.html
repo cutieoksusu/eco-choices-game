@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoChoices: Retro Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'VT323', monospace;
+            background-color: #8bac0f; /* Retro Gameboy Green */
+            color: #0f380f;
+            user-select: none;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Retro Pixelated Box Style */
+        .pixel-box {
+            background-color: #e0f8d0;
+            border: 4px solid #0f380f;
+            box-shadow: 6px 6px 0px #306230;
+            image-rendering: pixelated;
+        }
+        
+        .pixel-text {
+            text-shadow: 2px 2px 0px rgba(143, 172, 15, 0.5);
+        }
+
+        /* UI Elements */
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Retro Button */
+        .retro-btn {
+            background-color: #8bac0f;
+            color: #0f380f;
+            border: 4px solid #0f380f;
+            box-shadow: 4px 4px 0px #306230;
+            padding: 10px 20px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: transform 0.1s;
+        }
+        .retro-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0px 0px 0px #306230;
+        }
+
+        /* Choice Cards */
+        .choice-card {
+            width: 45%;
+            height: 280px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .choice-icon {
+            font-size: 5rem;
+            margin-bottom: 1rem;
+            filter: drop-shadow(4px 4px 0px #306230);
+        }
+
+        /* Hover Progress Bar */
+        .progress-bar-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 12px;
+            background-color: #306230;
+            display: none; /* Shown when hovering */
+        }
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background-color: #8bac0f;
+            transition: width 0.1s linear;
+        }
+
+        /* Custom Cursor */
+        #cursor {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            background-color: #e0f8d0;
+            border: 4px solid #0f380f;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            box-shadow: 4px 4px 0px rgba(15, 56, 15, 0.5);
+            transition: background-color 0.2s;
+            display: none;
+        }
+
+        /* Thermometer CSS Art */
+        .thermometer {
+            width: 40px;
+            height: 150px;
+            background: #e0f8d0;
+            border: 4px solid #0f380f;
+            border-radius: 20px;
+            position: relative;
+            margin: 0 auto;
+        }
+        .thermo-bulb {
+            width: 60px;
+            height: 60px;
+            background: #ff4b4b;
+            border: 4px solid #0f380f;
+            border-radius: 50%;
+            position: absolute;
+            bottom: -20px;
+            left: -14px;
+            z-index: 2;
+        }
+        .thermo-fill {
+            position: absolute;
+            bottom: 30px;
+            left: 5px;
+            width: 22px;
+            background: #ff4b4b;
+            transition: height 1s ease-out;
+            border-radius: 10px;
+        }
+
+        /* Custom Text Shadows for Role Screen */
+        .role-title-text {
+            text-shadow:
+                -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000,
+                -3px 0 0 #000, 3px 0 0 #000, 0 -3px 0 #000, 0 3px 0 #000,
+                0px 6px 0px rgba(0,0,0,0.8);
+            letter-spacing: 1px;
+        }
+        
+        .role-desc-text {
+            text-shadow: 
+                -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000,
+                -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        
+        <!-- Custom Hand Cursor -->
+        <div id="cursor"></div>
+
+        <!-- Hidden Webcam Video (for MediaPipe) -->
+        <video id="webcam" autoplay playsinline style="display: none;"></video>
+
+        <!-- 1. Start Screen -->
+        <div id="start-screen" class="pixel-box p-10 flex flex-col items-center max-w-2xl text-center z-10">
+            <h1 class="text-6xl font-bold mb-6 pixel-text">EcoChoices</h1>
+            <h2 class="text-3xl mb-8">Retro Edition</h2>
+            <p class="text-2xl mb-8 leading-relaxed">
+                Use your Mouse or WebCam (Hand)<br>
+                Hover over a choice for 2 seconds<br>
+                to make your decision.
+            </p>
+            <p id="loading-status" class="text-xl mb-4 text-gray-700">Loading AI Camera...</p>
+            <button id="btn-start" class="retro-btn" style="display: none;">START GAME</button>
+        </div>
+
+        <!-- 2. Role Selection Screen -->
+        <div id="role-screen" class="hidden w-full h-full flex flex-col items-center justify-center p-8 z-10">
+            
+            <div class="flex flex-row justify-center gap-12 w-full max-w-6xl mt-12" id="role-choices">
+                
+                <!-- President Column -->
+                <div class="flex flex-col items-center w-1/2 cursor-pointer role-selector group" data-role="president">
+                    <!-- Image Card -->
+                    <div class="relative w-full aspect-[4/3] border-[6px] border-[#d8b038] rounded-xl overflow-hidden shadow-[6px_6px_0px_rgba(0,0,0,0.7)] bg-[#1a1a1a] transition-transform duration-200 group-hover:scale-[1.02]">
+                        <!-- Dynamic Image -->
+                        <div id="role-img-president" class="absolute inset-0 bg-cover bg-center flex items-center justify-center" style="image-rendering: pixelated;">
+                            <span class="text-[#d8b038] text-3xl animate-pulse font-bold">Generating President...</span>
+                        </div>
+                        <!-- Gradient for text readability -->
+                        <div class="absolute bottom-0 left-0 w-full h-2/5 bg-gradient-to-t from-black/90 to-transparent"></div>
+                        <!-- Title -->
+                        <div class="absolute bottom-3 left-0 w-full text-center px-2">
+                            <h3 class="text-[3rem] text-[#d8b038] role-title-text font-bold leading-[1]">
+                                THE PRESIDENT<br><span class="text-[2.2rem]">(RICH NATION)</span>
+                            </h3>
+                        </div>
+                        <!-- Hover Progress -->
+                        <div class="progress-bar-container"><div class="progress-bar-fill bg-[#d8b038]"></div></div>
+                    </div>
+                    <!-- Description -->
+                    <p class="mt-6 text-white role-desc-text text-3xl text-center leading-snug">
+                        Rule a wealthy nation,<br>control resources,<br>decide exports & environmental impact.
+                    </p>
+                </div>
+
+                <!-- Citizen Column -->
+                <div class="flex flex-col items-center w-1/2 cursor-pointer role-selector group" data-role="citizen">
+                    <!-- Image Card -->
+                    <div class="relative w-full aspect-[4/3] border-[6px] border-[#70c048] rounded-xl overflow-hidden shadow-[6px_6px_0px_rgba(0,0,0,0.7)] bg-[#1a1a1a] transition-transform duration-200 group-hover:scale-[1.02]">
+                        <!-- Dynamic Image -->
+                        <div id="role-img-citizen" class="absolute inset-0 bg-cover bg-center flex items-center justify-center" style="image-rendering: pixelated;">
+                            <span class="text-[#70c048] text-3xl animate-pulse font-bold">Generating Citizen...</span>
+                        </div>
+                        <!-- Gradient for text readability -->
+                        <div class="absolute bottom-0 left-0 w-full h-2/5 bg-gradient-to-t from-black/90 to-transparent"></div>
+                        <!-- Title -->
+                        <div class="absolute bottom-5 left-0 w-full text-center px-2">
+                            <h3 class="text-[3.2rem] text-[#70c048] role-title-text font-bold leading-none">
+                                ORDINARY CITIZEN
+                            </h3>
+                        </div>
+                        <!-- Hover Progress -->
+                        <div class="progress-bar-container"><div class="progress-bar-fill bg-[#70c048]"></div></div>
+                    </div>
+                    <!-- Description -->
+                    <p class="mt-6 text-white role-desc-text text-3xl text-center leading-snug">
+                        Live daily life,<br>make consumption choices,<br>impact environment through actions.
+                    </p>
+                </div>
+                
+            </div>
+        </div>
+
+        <!-- 3. Main Game UI -->
+        <div id="game-ui" class="hidden w-full h-full flex-col items-center justify-between p-6 z-10">
+            
+            <!-- Top Stats Bar -->
+            <div class="pixel-box w-full max-w-5xl flex justify-between px-6 py-4 text-2xl font-bold">
+                <div>Role: <span id="stat-role" class="text-blue-700">N/A</span></div>
+                <div>Survival: <span id="stat-survival" class="text-green-700">100</span> Yrs</div>
+                <div id="stat-oil-container">Oil: <span id="stat-oil" class="text-gray-700">100</span>%</div>
+                <div>Temp: +<span id="stat-temp" class="text-red-600">0.0</span>°C</div>
+                <div>Sea Lvl: +<span id="stat-sea" class="text-blue-600">0</span>cm</div>
+            </div>
+
+            <!-- Dialogue Box (Story) -->
+            <div class="pixel-box w-full max-w-4xl p-6 text-center my-6">
+                <h2 id="scene-title" class="text-4xl font-bold mb-4">Scene Title</h2>
+                <p id="scene-desc" class="text-2xl leading-relaxed">
+                    Scene description goes here.<br>
+                    Line two of the description.
+                </p>
+            </div>
+
+            <!-- Choices Container -->
+            <div id="choices-container" class="flex flex-row justify-center gap-10 w-full max-w-5xl mb-10">
+                <!-- Choice 1 -->
+                <div class="pixel-box choice-card" id="choice-1">
+                    <div id="choice-1-icon" class="choice-icon">❓</div>
+                    <h3 id="choice-1-title" class="text-3xl font-bold mb-2">Choice 1</h3>
+                    <p id="choice-1-desc" class="text-xl">Description</p>
+                    <div class="progress-bar-container"><div class="progress-bar-fill"></div></div>
+                </div>
+                <!-- Choice 2 -->
+                <div class="pixel-box choice-card" id="choice-2">
+                    <div id="choice-2-icon" class="choice-icon">❓</div>
+                    <h3 id="choice-2-title" class="text-3xl font-bold mb-2">Choice 2</h3>
+                    <p id="choice-2-desc" class="text-xl">Description</p>
+                    <div class="progress-bar-container"><div class="progress-bar-fill"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Result Screen -->
+        <div id="result-screen" class="hidden w-full h-full flex flex-col items-center justify-center p-8 z-10 overflow-y-auto">
+            <div class="pixel-box p-8 max-w-4xl w-full text-center">
+                <h1 class="text-6xl font-bold mb-6 text-red-700">GAME OVER</h1>
+                <h2 id="result-title" class="text-4xl mb-6">Final Status</h2>
+                
+                <div class="flex justify-around items-end my-10">
+                    <!-- Polar Bear Visual -->
+                    <div class="flex flex-col items-center">
+                        <div id="polar-bear" class="text-7xl mb-2 filter drop-shadow-lg">🐻‍❄️</div>
+                        <div id="ice-floe" style="width: 150px; height: 30px; background-color: #a5f3fc; border: 4px solid #0f380f; border-radius: 10px;"></div>
+                        <p class="text-2xl mt-4 font-bold">Survival: <span id="result-survival"></span> Yrs</p>
+                    </div>
+
+                    <!-- Thermometer Visual -->
+                    <div class="flex flex-col items-center">
+                        <div class="thermometer mb-4">
+                            <div class="thermo-bulb"></div>
+                            <div id="thermo-level" class="thermo-fill" style="height: 10px;"></div>
+                        </div>
+                        <p class="text-2xl mt-4 font-bold">Temp: +<span id="result-temp"></span>°C</p>
+                    </div>
+                </div>
+
+                <p id="result-desc" class="text-2xl leading-relaxed mb-8">
+                    Conclusion text here.
+                </p>
+
+                <button id="btn-restart" class="retro-btn" onclick="resetGame()">PLAY AGAIN</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import {
+            HandLandmarker,
+            FilesetResolver
+        } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
+
+        // --- Game State ---
+        let state = {
+            role: '',
+            survival: 100,
+            oil: 100, // Only matters for President
+            temp: 0.0,
+            seaLevel: 0,
+            carbon: 0,
+            currentStep: 0
+        };
+
+        // --- Math Helper ---
+        const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
+
+        // --- Scenarios Data ---
+        const scenarios = {
+            president: [
+                {
+                    title: "The Petro-Empire",
+                    desc: "Developing nations demand cheap energy.<br>Will you exploit this to maintain dominance?",
+                    c1: { icon: "🛢️", title: "Export Cheap Oil", desc: "Lock them into<br>fossil fuel debt.", s: -15, o: -30, t: 0.5, sl: 15 },
+                    c2: { icon: "☀️", title: "Fund Renewables", desc: "Share green tech,<br>lose some power.", s: +10, o: -5, t: 0.1, sl: 2 }
+                },
+                {
+                    title: "Domestic Backlash",
+                    desc: "Citizens protest high fuel prices.<br>How will you respond?",
+                    c1: { icon: "🏭", title: "Drill More Oil", desc: "Appease voters,<br>ruin the climate.", s: -20, o: -40, t: 0.7, sl: 20 },
+                    c2: { icon: "🚲", title: "Enforce Carbon Tax", desc: "Risk losing election,<br>save the planet.", s: +15, o: 0, t: -0.1, sl: 0 }
+                },
+                {
+                    title: "The Climate Summit",
+                    desc: "Sea levels threaten island nations.<br>Will you pay for climate damages?",
+                    c1: { icon: "🙅", title: "Refuse to Pay", desc: "Protect national wealth.<br>Let islands sink.", s: -25, o: 0, t: 0.4, sl: 25 },
+                    c2: { icon: "🤝", title: "Pay Reparations", desc: "Take responsibility<br>for past emissions.", s: +20, o: 0, t: 0.0, sl: 5 }
+                }
+            ],
+            citizen: [
+                {
+                    title: "Daily Commute",
+                    desc: "Time to go to work.<br>How will you travel?",
+                    c1: { icon: "🚙", title: "Drive Giant SUV", desc: "Comfortable,<br>but burns heavy gas.", s: -10, o: 0, t: 0.2, sl: 5 },
+                    c2: { icon: "🚆", title: "Public Transit", desc: "Takes longer,<br>but eco-friendly.", s: +5, o: 0, t: 0.0, sl: 1 }
+                },
+                {
+                    title: "Shopping Spree",
+                    desc: "You need a new outfit for a party.<br>What will you buy?",
+                    c1: { icon: "👕", title: "Fast Fashion", desc: "Cheap, plastic-based,<br>made in sweatshops.", s: -12, o: 0, t: 0.3, sl: 8 },
+                    c2: { icon: "🧵", title: "Thrift / Eco-Brand", desc: "Expensive,<br>but sustainable.", s: +8, o: 0, t: 0.0, sl: 2 }
+                },
+                {
+                    title: "E-Waste Crisis",
+                    desc: "A new smartphone was released.<br>Your current one works fine.",
+                    c1: { icon: "📱", title: "Buy New Phone", desc: "Mining minerals harms<br>developing nations.", s: -15, o: 0, t: 0.4, sl: 10 },
+                    c2: { icon: "🔧", title: "Keep Old Phone", desc: "Resist consumerism.<br>Reduce e-waste.", s: +10, o: 0, t: 0.0, sl: 2 }
+                }
+            ]
+        };
+
+        // --- DOM Elements ---
+        const screens = {
+            start: document.getElementById('start-screen'),
+            role: document.getElementById('role-screen'),
+            game: document.getElementById('game-ui'),
+            result: document.getElementById('result-screen')
+        };
+        const statsUI = {
+            role: document.getElementById('stat-role'),
+            survival: document.getElementById('stat-survival'),
+            oil: document.getElementById('stat-oil'),
+            oilContainer: document.getElementById('stat-oil-container'),
+            temp: document.getElementById('stat-temp'),
+            sea: document.getElementById('stat-sea')
+        };
+        const sceneUI = {
+            title: document.getElementById('scene-title'),
+            desc: document.getElementById('scene-desc')
+        };
+        const choicesUI = [
+            {
+                card: document.getElementById('choice-1'),
+                icon: document.getElementById('choice-1-icon'),
+                title: document.getElementById('choice-1-title'),
+                desc: document.getElementById('choice-1-desc')
+            },
+            {
+                card: document.getElementById('choice-2'),
+                icon: document.getElementById('choice-2-icon'),
+                title: document.getElementById('choice-2-title'),
+                desc: document.getElementById('choice-2-desc')
+            }
+        ];
+
+        function showScreen(screenName) {
+            Object.values(screens).forEach(s => s.classList.add('hidden'));
+            screens[screenName].classList.remove('hidden');
+            screens[screenName].classList.add('flex');
+        }
+
+        // --- AI Image Generation Logic ---
+        let roleImagesGenerated = false;
+
+        async function fetchAIImage(prompt, elementId) {
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { 
+                    responseModalities: ['IMAGE'],
+                    imageConfig: { aspectRatio: "4:3" }
+                },
+            };
+            const apiKey = ""; // System handled
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=${apiKey}`;
+            
+            for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    const part = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+                    
+                    if (part) {
+                        const imageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+                        const el = document.getElementById(elementId);
+                        if (el) {
+                            el.style.backgroundImage = `url(${imageUrl})`;
+                            el.innerHTML = ''; // Clear loading text
+                        }
+                        return;
+                    }
+                } catch (e) {
+                    console.error("Image generation attempt failed, retrying...", e);
+                    await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+                }
+            }
+            
+            // Fallback text if generation completely fails
+            const el = document.getElementById(elementId);
+            if (el) {
+                el.innerHTML = '<span class="text-red-400 text-xl font-bold">Image Load Failed</span>';
+            }
+        }
+
+        function generateRoleImages() {
+            if (roleImagesGenerated) return;
+            roleImagesGenerated = true;
+            
+            fetchAIImage(
+                "16-bit pixel art style retro game screen. An older male president in a dark suit sitting behind a large wooden desk in the Oval Office with US flags and money bags on the desk. Detailed SNES style.", 
+                "role-img-president"
+            );
+            fetchAIImage(
+                "16-bit pixel art style retro game screen. An ordinary young woman with brown hair carrying a shopping bag on a busy city street with bicycles and cars. Detailed SNES style.", 
+                "role-img-citizen"
+            );
+        }
+
+        function updateStats() {
+            statsUI.role.innerText = state.role === 'president' ? 'President' : 'Citizen';
+            statsUI.survival.innerText = state.survival;
+            statsUI.oil.innerText = state.oil;
+            statsUI.temp.innerText = state.temp.toFixed(1);
+            statsUI.sea.innerText = state.seaLevel;
+
+            if (state.role === 'citizen') {
+                statsUI.oilContainer.style.display = 'none';
+            } else {
+                statsUI.oilContainer.style.display = 'block';
+            }
+        }
+
+        function loadScene() {
+            const currentScenarios = scenarios[state.role];
+            if (state.currentStep >= currentScenarios.length) {
+                showResult();
+                return;
+            }
+
+            const data = currentScenarios[state.currentStep];
+            sceneUI.title.innerHTML = data.title;
+            sceneUI.desc.innerHTML = data.desc;
+
+            // Setup Choice 1
+            choicesUI[0].icon.innerText = data.c1.icon;
+            choicesUI[0].title.innerHTML = data.c1.title;
+            choicesUI[0].desc.innerHTML = data.c1.desc;
+            choicesUI[0].card.onclick = () => makeChoice(data.c1);
+
+            // Setup Choice 2
+            choicesUI[1].icon.innerText = data.c2.icon;
+            choicesUI[1].title.innerHTML = data.c2.title;
+            choicesUI[1].desc.innerHTML = data.c2.desc;
+            choicesUI[1].card.onclick = () => makeChoice(data.c2);
+
+            updateStats();
+        }
+
+        function makeChoice(choiceData) {
+            // Apply impacts
+            state.survival += choiceData.s;
+            state.oil += choiceData.o;
+            state.temp += choiceData.t;
+            state.seaLevel += choiceData.sl;
+
+            // Constrain values
+            state.survival = clamp(state.survival, 0, 200);
+            state.oil = clamp(state.oil, 0, 100);
+
+            // Next step
+            state.currentStep++;
+            
+            // Visual feedback for clicking
+            document.body.style.backgroundColor = '#9bbc0f';
+            setTimeout(() => document.body.style.backgroundColor = '#8bac0f', 100);
+
+            loadScene();
+        }
+
+        function showResult() {
+            showScreen('result');
+            document.getElementById('result-survival').innerText = state.survival;
+            document.getElementById('result-temp').innerText = state.temp.toFixed(1);
+
+            const polarBear = document.getElementById('polar-bear');
+            const iceFloe = document.getElementById('ice-floe');
+            const thermoLevel = document.getElementById('thermo-level');
+            const resultDesc = document.getElementById('result-desc');
+
+            // Thermometer Animation
+            const maxTemp = 3.0; // Assuming 3.0 is disaster
+            let fillHeight = (state.temp / maxTemp) * 120; // max 120px height
+            fillHeight = clamp(fillHeight, 10, 120);
+            setTimeout(() => { thermoLevel.style.height = `${fillHeight}px`; }, 100);
+
+            // Polar Bear Status
+            if (state.survival > 80) {
+                polarBear.innerText = "🐻‍❄️😄";
+                iceFloe.style.width = "200px";
+                resultDesc.innerHTML = "You made sustainable choices!<br>The Arctic remains cold,<br>and slow violence is mitigating.";
+            } else if (state.survival > 40) {
+                polarBear.innerText = "🐻‍❄️💧";
+                iceFloe.style.width = "100px";
+                resultDesc.innerHTML = "The Earth is struggling.<br>Petro-imperialism and consumerism<br>are taking their toll on developing nations.";
+            } else {
+                polarBear.innerText = "🐻‍❄️💀";
+                iceFloe.style.width = "30px";
+                resultDesc.innerHTML = "Catastrophe!<br>Your greed destroyed the climate.<br>Developing nations are submerged.";
+            }
+        }
+
+        window.resetGame = function() {
+            state = {
+                role: '',
+                survival: 100,
+                oil: 100,
+                temp: 0.0,
+                seaLevel: 0,
+                carbon: 0,
+                currentStep: 0
+            };
+            document.getElementById('thermo-level').style.height = '10px';
+            showScreen('role');
+        }
+
+        // --- Role Selection Setup ---
+        document.querySelectorAll('.role-selector').forEach(card => {
+            card.addEventListener('click', () => {
+                state.role = card.getAttribute('data-role');
+                showScreen('game');
+                loadScene();
+            });
+        });
+
+        // --- MediaPipe Hand Tracking Setup ---
+        let handLandmarker;
+        let webcamRunning = false;
+        const video = document.getElementById("webcam");
+        const cursor = document.getElementById("cursor");
+
+        // Smoothing & Coordinate variables
+        let cursorX = window.innerWidth / 2;
+        let cursorY = window.innerHeight / 2;
+        let targetX = window.innerWidth / 2; 
+        let targetY = window.innerHeight / 2;
+        let isUsingHand = false; 
+
+        // Virtual Box limits (use center 50% of camera to map to full screen)
+        const MARGIN = 0.25; 
+
+        async function initAI() {
+            try {
+                const vision = await FilesetResolver.forVisionTasks(
+                    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+                );
+                handLandmarker = await HandLandmarker.createFromOptions(vision, {
+                    baseOptions: {
+                        modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
+                        delegate: "GPU"
+                    },
+                    runningMode: "VIDEO",
+                    numHands: 1
+                });
+                document.getElementById('loading-status').style.display = 'none';
+                document.getElementById('btn-start').style.display = 'inline-block';
+            } catch (e) {
+                console.error(e);
+                document.getElementById('loading-status').innerText = "Camera setup failed.";
+            }
+        }
+
+        document.getElementById('btn-start').addEventListener('click', async () => {
+            cursor.style.display = 'block';
+            showScreen('role');
+            generateRoleImages(); // Trigger AI image generation immediately upon entering role selection
+            
+            // Start Camera
+            if (!webcamRunning) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    video.srcObject = stream;
+                    
+                    // 비디오 크기 정보가 로드된 후 MediaPipe 분석 시작 (ROI 에러 방지)
+                    video.onloadedmetadata = () => {
+                        video.play();
+                        webcamRunning = true;
+                        window.requestAnimationFrame(gameLoop);
+                    };
+                } catch (err) {
+                    alert("Camera access is required for AI mode. You can still use the mouse.");
+                    window.requestAnimationFrame(gameLoop); // Start loop for mouse anyway
+                }
+            }
+        });
+
+        initAI();
+
+        // Mouse fallback
+        document.addEventListener('mousemove', (e) => {
+            isUsingHand = false; 
+            targetX = e.clientX;
+            targetY = e.clientY;
+        });
+
+        let lastVideoTime = -1;
+        
+        function gameLoop() {
+            // 비디오가 완전히 로드되지 않은 경우 분석 스킵 (방어 로직)
+            if (webcamRunning && (video.videoWidth === 0 || video.videoHeight === 0)) {
+                window.requestAnimationFrame(gameLoop);
+                return;
+            }
+
+            // MediaPipe Hand Detection
+            if (webcamRunning && handLandmarker && video.currentTime !== lastVideoTime) {
+                lastVideoTime = video.currentTime;
+                const results = handLandmarker.detectForVideo(video, performance.now());
+
+                if (results.landmarks && results.landmarks.length > 0) {
+                    isUsingHand = true; 
+                    const indexTip = results.landmarks[0][8]; // Index finger tip
+
+                    // Virtual Box Mapping (Center 50% of camera -> 100% of screen)
+                    let mappedX = (indexTip.x - MARGIN) / (1 - 2 * MARGIN);
+                    let mappedY = (indexTip.y - MARGIN) / (1 - 2 * MARGIN);
+
+                    mappedX = clamp(mappedX, 0, 1);
+                    mappedY = clamp(mappedY, 0, 1);
+
+                    // Mirror X and apply
+                    targetX = (1 - mappedX) * window.innerWidth;
+                    targetY = mappedY * window.innerHeight;
+                }
+            }
+
+            // Smooth Lerp for Cursor
+            cursorX += (targetX - cursorX) * 0.15;
+            cursorY += (targetY - cursorY) * 0.15;
+
+            cursor.style.left = `${cursorX}px`;
+            cursor.style.top = `${cursorY}px`;
+
+            checkHoverSelection();
+            
+            window.requestAnimationFrame(gameLoop);
+        }
+
+        // --- 2-Second Hover Selection Logic ---
+        let hoveredElement = null;
+        let hoverStartTime = 0;
+        const HOVER_TIME = 2000; // 2 seconds
+
+        function checkHoverSelection() {
+            const clickableCards = document.querySelectorAll('.choice-card, .role-selector');
+            let currentHover = null;
+
+            // Check if cursor is over any card
+            clickableCards.forEach(card => {
+                // Only check visible cards
+                if (card.closest('.hidden')) return; 
+
+                const rect = card.getBoundingClientRect();
+                if (cursorX >= rect.left && cursorX <= rect.right &&
+                    cursorY >= rect.top && cursorY <= rect.bottom) {
+                    currentHover = card;
+                }
+            });
+
+            if (currentHover !== hoveredElement) {
+                // Reset old hover
+                if (hoveredElement) {
+                    hoveredElement.style.transform = 'scale(1)';
+                    const container = hoveredElement.querySelector('.progress-bar-container');
+                    const bar = hoveredElement.querySelector('.progress-bar-fill');
+                    if (container) container.style.display = 'none';
+                    if (bar) bar.style.width = '0%';
+                }
+                hoveredElement = currentHover;
+                
+                // Start new hover
+                if (hoveredElement) {
+                    hoverStartTime = performance.now();
+                    hoveredElement.style.transform = 'scale(1.05)';
+                    const container = hoveredElement.querySelector('.progress-bar-container');
+                    if (container) container.style.display = 'block';
+                }
+            } else if (hoveredElement) {
+                // Update progress bar
+                const elapsed = performance.now() - hoverStartTime;
+                const progress = clamp(elapsed / HOVER_TIME, 0, 1) * 100;
+                
+                const bar = hoveredElement.querySelector('.progress-bar-fill');
+                if (bar) bar.style.width = `${progress}%`;
+
+                // Trigger click after 2 seconds
+                if (elapsed >= HOVER_TIME) {
+                    hoveredElement.click();
+                    // Reset to prevent double click
+                    const oldHover = hoveredElement;
+                    hoveredElement = null; 
+                    oldHover.style.transform = 'scale(1)';
+                    const container = oldHover.querySelector('.progress-bar-container');
+                    if (container) container.style.display = 'none';
+                }
+            }
+        }
+    </script>
+</body>
+</html>
